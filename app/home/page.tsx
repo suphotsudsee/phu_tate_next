@@ -4,6 +4,36 @@ import { useEffect, useMemo, useState } from "react";
 
 type LabRow = any;
 
+const formatLabThai = (row: any) =>
+  row?.LABTEST_TH || row?.LABTEST_NAME || row?.LABTEST || "-";
+
+function safeNumber(v: any) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toIsoLike(raw: any) {
+  // ในภาพคุณโชว์แนวนี้: 2025-04-19T17:00:00.000Z
+  // ถ้าข้อมูลเดิมเป็น YYYYMMDD หรือ date string จะพยายามแปลงเป็น ISO ให้
+  if (!raw) return "-";
+  const s = String(raw).trim();
+
+  // ถ้าเป็น ISO อยู่แล้ว
+  if (s.includes("T") && (s.endsWith("Z") || s.includes("."))) return s;
+
+  // ถ้าเป็น YYYYMMDD
+  if (/^\d{8}$/.test(s)) {
+    const y = s.slice(0, 4);
+    const m = s.slice(4, 6);
+    const d = s.slice(6, 8);
+    const dt = new Date(`${y}-${m}-${d}T17:00:00.000Z`);
+    return isNaN(dt.getTime()) ? s : dt.toISOString();
+  }
+
+  const dt = new Date(s);
+  return isNaN(dt.getTime()) ? s : dt.toISOString();
+}
+
 export default function HomePage() {
   const [labs, setLabs] = useState<LabRow[]>([]);
   const [cid, setCid] = useState<string>("");
@@ -16,37 +46,28 @@ export default function HomePage() {
     setCid(rawCid || "");
   }, []);
 
-  const filteredData = useMemo(() => {
-    const parseDate = (raw: any) => {
-      if (!raw) return null;
-      const str = String(raw).trim();
-      if (str.length === 8 && /^\d{8}$/.test(str)) {
-        const y = str.slice(0, 4);
-        const m = str.slice(4, 6);
-        const d = str.slice(6, 8);
-        const dt = new Date(`${y}-${m}-${d}`);
-        return Number.isNaN(dt.getTime()) ? null : dt;
-      }
-      const dt = new Date(str);
-      return Number.isNaN(dt.getTime()) ? null : dt;
-    };
-
-    return (labs || [])
-      .map((item) => {
-        const parsed = parseDate(item.DATE_SERV);
-        if (!parsed) return null;
-        return {
-          date: parsed.toISOString().split("T")[0],
-          labResult: parseFloat(item.LABRESULT) || 0,
-          hospname:
-            item.HOSPNAME || item.hospname || item.LABPLACE || item.HOSPCODE || "ไม่ระบุสถานพยาบาล",
-          originalItem: item,
-        };
-      })
-      .filter(Boolean)
-      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(-10);
+  // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
+  const labsSorted = useMemo(() => {
+    const copy = [...(labs || [])];
+    copy.sort((a, b) => {
+      const da = new Date(toIsoLike(a.DATE_SERV)).getTime();
+      const db = new Date(toIsoLike(b.DATE_SERV)).getTime();
+      return db - da;
+    });
+    return copy;
   }, [labs]);
+
+  const latestRow = labsSorted[0];
+
+  // ค่าล่าสุด "น้ำตาลในเลือด" (ใน backend เดิม filter LABTEST น้ำตาลอยู่แล้ว) :contentReference[oaicite:1]{index=1}
+  const latestGlucose = safeNumber(latestRow?.LABRESULT);
+
+  // ชื่อหน่วยบริการ
+  const latestHosp =
+    latestRow?.HOSPNAME ||
+    latestRow?.LABPLACE ||
+    latestRow?.HOSPCODE ||
+    "ไม่ระบุสถานพยาบาล";
 
   useEffect(() => {
     if (!cid) return;
@@ -55,65 +76,76 @@ export default function HomePage() {
         const r = await fetch(`/api/cvdrisk/${cid}`);
         const d = await r.json();
         if (d.success && d.results?.length) setCvdRisk(d.results[0]);
-      } catch {}
+      } catch {
+        // ไม่ทำอะไร ให้ UI แสดง "..."
+      }
     })();
   }, [cid]);
 
-  if (!labs?.length) {
+  if (!labsSorted.length) {
     return (
-      <main style={{ padding: 20, textAlign: "center" }}>
-        <h3>ไม่พบข้อมูลการตรวจ</h3>
-        <p>กรุณากลับไปหน้าแรกแล้วทำการยืนยันตัวตน</p>
+      <main className="page">
+        <h1 className="title">ผลตรวจ (ล่าสุด)</h1>
+        <div className="card" style={{ textAlign: "center" }}>
+          ไม่พบข้อมูลการตรวจ
+        </div>
       </main>
     );
   }
 
-  const latest = filteredData[filteredData.length - 1];
-
   return (
-    <main style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>
-      <h2>ผลตรวจ (ล่าสุด)</h2>
+    <main className="page">
+      <h1 className="title">ผลตรวจ (ล่าสุด)</h1>
 
-      <section style={{ padding: 12, border: "1px solid #ddd", borderRadius: 10, marginBottom: 16 }}>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>
-          {cvdRisk ? Number(cvdRisk.Thai_ASCVD2_Risk_percent).toFixed(1) : "..."}
+      {/* การ์ด 1: CVD Risk */}
+      <section className="card">
+        <div className="bigNumber">
+          {cvdRisk?.Thai_ASCVD2_Risk_percent != null
+            ? Number(cvdRisk.Thai_ASCVD2_Risk_percent).toFixed(1)
+            : "..."}
         </div>
-        <div>ความเสี่ยงโรคหัวใจและหลอดเลือด (10 ปี)</div>
-        <div style={{ color: "#666", marginTop: 6 }}>
-          {cvdRisk?.Risk_Category_TH || "-"}
-        </div>
+        <p className="subTitle">ความเสี่ยงโรคหัวใจและหลอดเลือด (10 ปี)</p>
+        <div className="muted">{cvdRisk?.Risk_Category_TH || "-"}</div>
       </section>
 
-      <section style={{ padding: 12, border: "1px solid #ddd", borderRadius: 10, marginBottom: 16 }}>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>{latest?.labResult ?? "-"}</div>
-        <div>น้ำตาลในเลือด</div>
-        <div style={{ color: "#666", marginTop: 6 }}>{latest?.hospname}</div>
+      {/* การ์ด 2: น้ำตาลในเลือด */}
+      <section className="card">
+        <div className="bigNumber">
+          {latestGlucose != null ? latestGlucose : "..."}
+        </div>
+        <p className="subTitle">น้ำตาลในเลือด</p>
+        <div className="muted">{latestHosp}</div>
       </section>
 
-      <h3>ตารางผลแล็บ (ทั้งหมด {labs.length} รายการ)</h3>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      {/* ตาราง */}
+      <h2 className="sectionTitle">
+        ตารางผลแล็บ (ทั้งหมด {labsSorted.length} รายการ)
+      </h2>
+
+      <div className="tableWrap">
+        <table className="table">
           <thead>
-            <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ border: "1px solid #ccc", padding: 6 }}>วันที่</th>
-              <th style={{ border: "1px solid #ccc", padding: 6 }}>สถานพยาบาล</th>
-              <th style={{ border: "1px solid #ccc", padding: 6 }}>รายการ</th>
-              <th style={{ border: "1px solid #ccc", padding: 6 }}>ชื่อแล็บ</th>
-              <th style={{ border: "1px solid #ccc", padding: 6 }}>ผล</th>
+            <tr>
+              <th>วันที่</th>
+              <th>สถานพยาบาล</th>
+              <th>รายการ</th>
+              <th>ชื่อแล็บ</th>
+              <th>ผล</th>
             </tr>
           </thead>
+
           <tbody>
-            {labs.map((row: any, idx: number) => (
+            {labsSorted.map((row: any, idx: number) => (
               <tr key={`${row.CID || cid}-${idx}`}>
-                <td style={{ border: "1px solid #ccc", padding: 6 }}>{row.DATE_SERV || "-"}</td>
-                <td style={{ border: "1px solid #ccc", padding: 6 }}>
-                  {row.HOSPNAME || row.LABPLACE || row.HOSPCODE || "-"}
+                <td>{toIsoLike(row.DATE_SERV)}</td>
+                <td>{row.HOSPNAME || row.LABPLACE || row.HOSPCODE || "-"}</td>
+                <td>{row.LABTEST || "-"}</td>
+                <td>{formatLabThai(row)}</td>
+                <td>
+                  {safeNumber(row.LABRESULT) != null
+                    ? Number(row.LABRESULT).toFixed(2)
+                    : row.LABRESULT ?? "-"}
                 </td>
-                <td style={{ border: "1px solid #ccc", padding: 6 }}>{row.LABTEST || "-"}</td>
-                <td style={{ border: "1px solid #ccc", padding: 6 }}>
-                  {row.LABTEST_TH || row.LABTEST_NAME || row.LABTEST || "-"}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: 6 }}>{row.LABRESULT || "-"}</td>
               </tr>
             ))}
           </tbody>
