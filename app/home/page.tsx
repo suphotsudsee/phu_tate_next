@@ -59,11 +59,33 @@ export default function HomePage() {
     const rawPerson = sessionStorage.getItem("person");
     const userFirst = sessionStorage.getItem("userFirstName") || "";
     const userLast = sessionStorage.getItem("userLastName") || "";
+
+ // ✅ ข้อ 3: Guard - ถ้าไม่มี session สำคัญ ให้เด้งกลับหน้าแรกทันที
+  if (!rawCid || !rawLabs) {
+    window.location.replace("/");
+    return;
+  }
+
     setLabs(rawLabs ? JSON.parse(rawLabs) : []);
     setCid(rawCid || "");
     setPerson(rawPerson ? JSON.parse(rawPerson) : null);
     setUserFallback({ firstName: userFirst, lastName: userLast });
   }, []);
+
+useEffect(() => {
+  // ✅ ข้อ 4: ล้าง session เมื่อปิดแท็บ/รีเฟรช (เพิ่มความปลอดภัยข้อมูลสุขภาพ)
+  const onUnload = () => {
+    sessionStorage.removeItem("labs");
+    sessionStorage.removeItem("cid");
+    sessionStorage.removeItem("person");
+    sessionStorage.removeItem("userFirstName");
+    sessionStorage.removeItem("userLastName");
+  };
+
+  window.addEventListener("beforeunload", onUnload);
+  return () => window.removeEventListener("beforeunload", onUnload);
+}, [cid, person]);
+
 
   // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
   const labsSorted = useMemo(() => {
@@ -128,35 +150,45 @@ export default function HomePage() {
 
   return (
     <main className="page">
-
-      <AppLogoutButton label="ออกจากระบบแอป" />
-
-      <h1 className="title">ผลตรวจ (ล่าสุด)</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+        <h1 className="title" style={{ margin: 0 }}>
+          ผลตรวจ (ล่าสุด)
+        </h1>
+        <div style={{ marginLeft: "auto" }}>
+          <AppLogoutButton label="ออกจากระบบแอป" variant="inline" />
+        </div>
+      </div>
 
       {/* การ์ด: รายละเอียดบุคคล (ก่อนผลตรวจ) */}
       <section className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ margin: "0 0 8px" }}>ข้อมูลผู้ใช้</h3>
-        <div className="grid">
-          <div>
+        <div className="info-row">
+          <div className="info-item">
             <p className="label">ชื่อ - นามสกุล</p>
-            <p className="value">
+            <p className="value" style={{ margin: 0 }}>
               {person?.firstName || userFallback.firstName || "-"}{" "}
               {person?.lastName || userFallback.lastName || ""}
             </p>
           </div>
-          <div>
-            <p className="label">เพศ</p>
-            <p className="chip chip-gender">{person?.gender || "-"}</p>
+          <div className="info-pair">
+            <div className="info-item">
+              <p className="label">เพศ</p>
+              <p className="chip chip-gender" style={{ margin: 0 }}>
+                {person?.gender || "-"}
+              </p>
+            </div>
+            <div className="info-item">
+              <p className="label">อายุ</p>
+              <p className="chip chip-age" style={{ margin: 0 }}>
+                {person?.age != null ? `${person.age} ปี` : "-"}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="label">อายุ</p>
-            <p className="chip chip-age">
-              {person?.age != null ? `${person.age} ปี` : "-"}
-            </p>
-          </div>
-          <div>
+          <div className="info-item">
             <p className="label">เลขบัตรประชาชน</p>
-            <p className="value mono">{cid || person?.cid || "-"}</p>
+            <p className="value mono" style={{ margin: 0 }}>
+              {cid || person?.cid || "-"}
+            </p>
           </div>
         </div>
       </section>

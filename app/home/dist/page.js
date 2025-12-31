@@ -94,11 +94,28 @@ function HomePage() {
         var rawPerson = sessionStorage.getItem("person");
         var userFirst = sessionStorage.getItem("userFirstName") || "";
         var userLast = sessionStorage.getItem("userLastName") || "";
+        // ✅ ข้อ 3: Guard - ถ้าไม่มี session สำคัญ ให้เด้งกลับหน้าแรกทันที
+        if (!rawCid || !rawLabs) {
+            window.location.replace("/");
+            return;
+        }
         setLabs(rawLabs ? JSON.parse(rawLabs) : []);
         setCid(rawCid || "");
         setPerson(rawPerson ? JSON.parse(rawPerson) : null);
         setUserFallback({ firstName: userFirst, lastName: userLast });
     }, []);
+    react_1.useEffect(function () {
+        // ✅ ข้อ 4: ล้าง session เมื่อปิดแท็บ/รีเฟรช (เพิ่มความปลอดภัยข้อมูลสุขภาพ)
+        var onUnload = function () {
+            sessionStorage.removeItem("labs");
+            sessionStorage.removeItem("cid");
+            sessionStorage.removeItem("person");
+            sessionStorage.removeItem("userFirstName");
+            sessionStorage.removeItem("userLastName");
+        };
+        window.addEventListener("beforeunload", onUnload);
+        return function () { return window.removeEventListener("beforeunload", onUnload); };
+    }, [cid, person]);
     // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
     var labsSorted = react_1.useMemo(function () {
         var copy = __spreadArrays((labs || []));
