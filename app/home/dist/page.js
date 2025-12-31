@@ -45,6 +45,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 exports.__esModule = true;
 var react_1 = require("react");
+var AppLogoutButton_1 = require("@/components/AppLogoutButton");
 var formatLabThai = function (row) {
     return (row === null || row === void 0 ? void 0 : row.LABTEST_TH) || (row === null || row === void 0 ? void 0 : row.LABTEST_NAME) || (row === null || row === void 0 ? void 0 : row.LABTEST) || "-";
 };
@@ -84,12 +85,19 @@ function HomePage() {
     var _this = this;
     var _a = react_1.useState([]), labs = _a[0], setLabs = _a[1];
     var _b = react_1.useState(""), cid = _b[0], setCid = _b[1];
-    var _c = react_1.useState(null), cvdRisk = _c[0], setCvdRisk = _c[1];
+    var _c = react_1.useState(null), person = _c[0], setPerson = _c[1];
+    var _d = react_1.useState({}), userFallback = _d[0], setUserFallback = _d[1];
+    var _e = react_1.useState(null), cvdRisk = _e[0], setCvdRisk = _e[1];
     react_1.useEffect(function () {
         var rawLabs = sessionStorage.getItem("labs");
         var rawCid = sessionStorage.getItem("cid");
+        var rawPerson = sessionStorage.getItem("person");
+        var userFirst = sessionStorage.getItem("userFirstName") || "";
+        var userLast = sessionStorage.getItem("userLastName") || "";
         setLabs(rawLabs ? JSON.parse(rawLabs) : []);
         setCid(rawCid || "");
+        setPerson(rawPerson ? JSON.parse(rawPerson) : null);
+        setUserFallback({ firstName: userFirst, lastName: userLast });
     }, []);
     // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
     var labsSorted = react_1.useMemo(function () {
@@ -111,6 +119,31 @@ function HomePage() {
     react_1.useEffect(function () {
         if (!cid)
             return;
+        // ถ้ายังไม่มี person ลองดึงจาก API
+        if (!person) {
+            (function () { return __awaiter(_this, void 0, void 0, function () {
+                var r, d, _a;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _b.trys.push([0, 3, , 4]);
+                            return [4 /*yield*/, fetch("/api/person/" + cid)];
+                        case 1:
+                            r = _b.sent();
+                            return [4 /*yield*/, r.json()];
+                        case 2:
+                            d = _b.sent();
+                            if (d.success && d.person)
+                                setPerson(d.person);
+                            return [3 /*break*/, 4];
+                        case 3:
+                            _a = _b.sent();
+                            return [3 /*break*/, 4];
+                        case 4: return [2 /*return*/];
+                    }
+                });
+            }); })();
+        }
         (function () { return __awaiter(_this, void 0, void 0, function () {
             var r, d, _a;
             var _b;
@@ -141,7 +174,26 @@ function HomePage() {
             React.createElement("div", { className: "card", style: { textAlign: "center" } }, "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08")));
     }
     return (React.createElement("main", { className: "page" },
+        React.createElement(AppLogoutButton_1["default"], { label: "\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E2D\u0E1B" }),
         React.createElement("h1", { className: "title" }, "\u0E1C\u0E25\u0E15\u0E23\u0E27\u0E08 (\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14)"),
+        React.createElement("section", { className: "card", style: { marginBottom: 16 } },
+            React.createElement("h3", { style: { margin: "0 0 8px" } }, "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49"),
+            React.createElement("div", { className: "grid" },
+                React.createElement("div", null,
+                    React.createElement("p", { className: "label" }, "\u0E0A\u0E37\u0E48\u0E2D - \u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25"),
+                    React.createElement("p", { className: "value" },
+                        (person === null || person === void 0 ? void 0 : person.firstName) || userFallback.firstName || "-",
+                        " ",
+                        (person === null || person === void 0 ? void 0 : person.lastName) || userFallback.lastName || "")),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "label" }, "\u0E40\u0E1E\u0E28"),
+                    React.createElement("p", { className: "chip chip-gender" }, (person === null || person === void 0 ? void 0 : person.gender) || "-")),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "label" }, "\u0E2D\u0E32\u0E22\u0E38"),
+                    React.createElement("p", { className: "chip chip-age" }, (person === null || person === void 0 ? void 0 : person.age) != null ? person.age + " \u0E1B\u0E35" : "-")),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "label" }, "\u0E40\u0E25\u0E02\u0E1A\u0E31\u0E15\u0E23\u0E1B\u0E23\u0E30\u0E0A\u0E32\u0E0A\u0E19"),
+                    React.createElement("p", { className: "value mono" }, cid || (person === null || person === void 0 ? void 0 : person.cid) || "-")))),
         React.createElement("section", { className: "card" },
             React.createElement("div", { className: "bigNumber" }, (cvdRisk === null || cvdRisk === void 0 ? void 0 : cvdRisk.Thai_ASCVD2_Risk_percent) != null
                 ? Number(cvdRisk.Thai_ASCVD2_Risk_percent).toFixed(1)

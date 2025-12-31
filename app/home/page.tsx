@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AppLogoutButton from "@/components/AppLogoutButton";
 
 type LabRow = any;
 
@@ -127,6 +128,9 @@ export default function HomePage() {
 
   return (
     <main className="page">
+
+      <AppLogoutButton label="ออกจากระบบแอป" />
+
       <h1 className="title">ผลตรวจ (ล่าสุด)</h1>
 
       {/* การ์ด: รายละเอียดบุคคล (ก่อนผลตรวจ) */}
