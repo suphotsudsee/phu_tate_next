@@ -45,6 +45,46 @@ function formatThaiDate(raw: any, mode: "short" | "long" = "short") {
   return dt.toLocaleDateString(locale, options);
 }
 
+function analyzeGlucose(glucose: number | null) {
+  if (glucose == null) {
+    return {
+      label: "ไม่มีข้อมูล",
+      summary: "ไม่พบค่าตรวจน้ำตาล",
+      detail: "กรุณาตรวจสอบประวัติการตรวจหรือเชื่อมต่อบัญชีอีกครั้ง",
+      color: "#94a3b8",
+    };
+  }
+  if (glucose < 70) {
+    return {
+      label: "ต่ำกว่าปกติ",
+      summary: "น้ำตาลต่ำกว่าปกติ ควรปรึกษาแพทย์",
+      detail: "ค่าปกติหลังอดอาหาร 8 ชม. 70 - 99 mg/dL",
+      color: "#f59e0b",
+    };
+  }
+  if (glucose <= 99) {
+    return {
+      label: "ปกติ (Normal)",
+      summary: "ระดับน้ำตาลอยู่ในเกณฑ์ดี",
+      detail: "เกณฑ์ปกติ (หลังอดอาหาร 8 ชม.): 70 - 99 mg/dL",
+      color: "#22c55e",
+    };
+  }
+  if (glucose <= 125) {
+    return {
+      label: "เสี่ยงเบาหวาน (Pre-diabetes)",
+      summary: "อยู่ในช่วงเสี่ยง ควรปรับพฤติกรรมและติดตามซ้ำ",
+      detail: "เกณฑ์เสี่ยงเบาหวาน: 100 - 125 mg/dL",
+      color: "#f97316",
+    };
+  }
+  return {
+    label: "เบาหวาน (Diabetes)",
+    summary: "ค่าสูง ควรปรึกษาแพทย์เพื่อประเมินเพิ่มเติม",
+    detail: "เกณฑ์เบาหวาน: 126 mg/dL ขึ้นไป",
+    color: "#ef4444",
+  };
+}
 
 export default function HomePage() {
   const [labs, setLabs] = useState<LabRow[]>([]);
@@ -101,11 +141,21 @@ useEffect(() => {
 
   const latestRow = labsSorted[0];
 
-  // ค่าล่าสุด "น้ำตาลในเลือด" (ใน backend เดิม filter LABTEST น้ำตาลอยู่แล้ว) :contentReference[oaicite:1]{index=1}
-  const latestGlucose = safeNumber(latestRow?.LABRESULT);
+  // ค่าล่าสุด "น้ำตาลในเลือด" ต้องเป็น LABTEST = 0531004 เท่านั้น
+  const glucoseRow = labsSorted.find(
+    (row) => String(row?.LABTEST || "").trim() === "0531004"
+  );
+  const latestGlucose = safeNumber(glucoseRow?.LABRESULT);
+  const glucoseAnalysis = useMemo(
+    () => analyzeGlucose(latestGlucose),
+    [latestGlucose]
+  );
 
   // ชื่อหน่วยบริการ
   const latestHosp =
+    glucoseRow?.HOSPNAME ||
+    glucoseRow?.LABPLACE ||
+    glucoseRow?.HOSPCODE ||
     latestRow?.HOSPNAME ||
     latestRow?.LABPLACE ||
     latestRow?.HOSPCODE ||
@@ -193,24 +243,39 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* การ์ด 1: CVD Risk */}
-      <section className="card">
-        <div className="bigNumber">
-          {cvdRisk?.Thai_ASCVD2_Risk_percent != null
-            ? Number(cvdRisk.Thai_ASCVD2_Risk_percent).toFixed(1)
-            : "..."}
-        </div>
-        <p className="subTitle">ความเสี่ยงโรคหัวใจและหลอดเลือด (10 ปี)</p>
-        <div className="muted">{cvdRisk?.Risk_Category_TH || "-"}</div>
-      </section>
-
-      {/* การ์ด 2: น้ำตาลในเลือด */}
+      {/* การ์ด: น้ำตาลในเลือด */}
       <section className="card">
         <div className="bigNumber">
           {latestGlucose != null ? latestGlucose : "..."}
         </div>
         <p className="subTitle">น้ำตาลในเลือด</p>
         <div className="muted">{latestHosp}</div>
+      </section>
+
+      {/* การ์ด 3: วิเคราะห์น้ำตาลในเลือด */}
+      <section className="card">
+        <h3 style={{ margin: "0 0 10px" }}>วิเคราะห์ค่าน้ำตาลในเลือด</h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+          <p className="chip chip-age" style={{ margin: 0, color: "#0f172a" }}>
+            ค่าที่ตรวจได้:{" "}
+            {latestGlucose != null ? `${latestGlucose} mg/dL` : "-"}
+          </p>
+          <p
+            className="chip"
+            style={{
+              margin: 0,
+              borderColor: glucoseAnalysis.color,
+              color: "#0f172a",
+              background: "#fff",
+            }}
+          >
+            การแปลผล: {glucoseAnalysis.label}
+          </p>
+        </div>
+        <p className="muted" style={{ marginTop: 10 }}>{glucoseAnalysis.detail}</p>
+        <p style={{ margin: "6px 0 0", fontWeight: 700, color: "#0f172a" }}>
+          สรุป: {glucoseAnalysis.summary}
+        </p>
       </section>
 
       {/* ตาราง */}

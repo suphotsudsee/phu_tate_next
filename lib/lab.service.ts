@@ -25,7 +25,7 @@ export async function fetchLabByCid(cid: string) {
       ON ct.code = TRIM(lf.LABTEST)
       OR ct.old_code = TRIM(lf.LABTEST)
     WHERE p.CID = ?
-      AND lf.LABTEST IN ('0531102', '0531101', '0531104')
+      
     ORDER BY lf.DATE_SERV DESC
     LIMIT 20;
   `;
