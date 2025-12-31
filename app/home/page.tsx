@@ -49,15 +49,19 @@ export default function HomePage() {
   const [labs, setLabs] = useState<LabRow[]>([]);
   const [cid, setCid] = useState<string>("");
   const [person, setPerson] = useState<any>(null);
+  const [userFallback, setUserFallback] = useState<{ firstName?: string; lastName?: string }>({});
   const [cvdRisk, setCvdRisk] = useState<any>(null);
 
   useEffect(() => {
     const rawLabs = sessionStorage.getItem("labs");
     const rawCid = sessionStorage.getItem("cid");
     const rawPerson = sessionStorage.getItem("person");
+    const userFirst = sessionStorage.getItem("userFirstName") || "";
+    const userLast = sessionStorage.getItem("userLastName") || "";
     setLabs(rawLabs ? JSON.parse(rawLabs) : []);
     setCid(rawCid || "");
     setPerson(rawPerson ? JSON.parse(rawPerson) : null);
+    setUserFallback({ firstName: userFirst, lastName: userLast });
   }, []);
 
   // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
@@ -86,6 +90,19 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!cid) return;
+    // ถ้ายังไม่มี person ลองดึงจาก API
+    if (!person) {
+      (async () => {
+        try {
+          const r = await fetch(`/api/person/${cid}`);
+          const d = await r.json();
+          if (d.success && d.person) setPerson(d.person);
+        } catch {
+          // ignore
+        }
+      })();
+    }
+
     (async () => {
       try {
         const r = await fetch(`/api/cvdrisk/${cid}`);
@@ -119,7 +136,8 @@ export default function HomePage() {
           <div>
             <p className="label">ชื่อ - นามสกุล</p>
             <p className="value">
-              {person?.firstName || "-"} {person?.lastName || ""}
+              {person?.firstName || userFallback.firstName || "-"}{" "}
+              {person?.lastName || userFallback.lastName || ""}
             </p>
           </div>
           <div>

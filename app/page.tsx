@@ -41,6 +41,8 @@ export default function Page() {
           sessionStorage.setItem("labs", JSON.stringify(d.labs || []));
           sessionStorage.setItem("cid", String(d.user?.idNumber || ""));
           sessionStorage.setItem("person", JSON.stringify(d.person || null));
+          sessionStorage.setItem("userFirstName", d.user?.firstName || "");
+          sessionStorage.setItem("userLastName", d.user?.lastName || "");
           router.push("/home");
         }
       } catch (e: any) {
@@ -75,6 +77,8 @@ export default function Page() {
       sessionStorage.setItem("labs", JSON.stringify(d.labs || []));
       sessionStorage.setItem("cid", String(d.user?.idNumber || cid));
       sessionStorage.setItem("person", JSON.stringify(d.person || null));
+      sessionStorage.setItem("userFirstName", d.user?.firstName || "");
+      sessionStorage.setItem("userLastName", d.user?.lastName || "");
       router.push("/home");
     } catch {
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");

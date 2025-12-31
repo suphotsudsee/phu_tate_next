@@ -75,18 +75,54 @@ export async function fetchPersonFromHDC(cid: string) {
 
 export async function fetchPersonDetail(cid: string) {
   if (!cid) return null;
-  const sql = `
+  // primary: t_person (มีเพศ/วันเกิด)
+  const sqlPerson = `
     SELECT CID, NAME, LNAME, SEX, BIRTH
-    FROM t_person
+    FROM t_person_cid
     WHERE CID = ?
     LIMIT 1
   `;
-  const [rows] = await db4.query(sql, [cid]);
-  const r = rows as any[];
-  if (r.length === 0) return null;
+  let p: any = null;
+  try {
+    const [rowsPerson] = await db4.query(sqlPerson, [cid]);
+    const rPerson = rowsPerson as any[];
+    p = rPerson[0];
+  } catch (e: any) {
+    // ถ้าตาราง t_person ไม่มี ให้ไป fallback ทันที
+    if (e?.code !== "ER_NO_SUCH_TABLE") {
+      throw e;
+    }
+  }
 
-  const p = r[0];
-  const birth = p.BIRTH ? new Date(p.BIRTH) : null;
+  // fallback: t_person_cid (ไม่มีเพศ/วันเกิด)
+  if (!p) {
+    const [rowsCid] = await db4.query(
+      `SELECT CID, NAME, LNAME FROM t_person_cid WHERE CID = ? LIMIT 1`,
+      [cid]
+    );
+    const rCid = rowsCid as any[];
+    p = rCid[0];
+    if (!p) return null;
+    return {
+      cid: p.CID,
+      firstName: p.NAME,
+      lastName: p.LNAME,
+      gender: "ไม่ทราบ",
+      birthDate: null,
+      age: null,
+    };
+  }
+
+  const birthRaw = p.BIRTH;
+  let birth: Date | null = null;
+  if (typeof birthRaw === "string" && /^\d{8}$/.test(birthRaw.trim())) {
+    // handle YYYYMMDD
+    const s = birthRaw.trim();
+    birth = new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T00:00:00`);
+  } else if (birthRaw) {
+    const d = new Date(birthRaw);
+    birth = isNaN(d.getTime()) ? null : d;
+  }
   const age = birth
     ? Math.floor((Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25))
     : null;
