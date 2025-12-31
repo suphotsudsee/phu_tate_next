@@ -73,6 +73,38 @@ export async function fetchPersonFromHDC(cid: string) {
   return r.length > 0 ? r[0] : null;
 }
 
+export async function fetchPersonDetail(cid: string) {
+  if (!cid) return null;
+  const sql = `
+    SELECT CID, NAME, LNAME, SEX, BIRTH
+    FROM t_person
+    WHERE CID = ?
+    LIMIT 1
+  `;
+  const [rows] = await db4.query(sql, [cid]);
+  const r = rows as any[];
+  if (r.length === 0) return null;
+
+  const p = r[0];
+  const birth = p.BIRTH ? new Date(p.BIRTH) : null;
+  const age = birth
+    ? Math.floor((Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+    : null;
+
+  let gender = "ไม่ทราบ";
+  if (p.SEX === "1" || p.SEX === 1) gender = "ชาย";
+  else if (p.SEX === "2" || p.SEX === 2) gender = "หญิง";
+
+  return {
+    cid: p.CID,
+    firstName: p.NAME,
+    lastName: p.LNAME,
+    gender,
+    birthDate: p.BIRTH,
+    age,
+  };
+}
+
 export async function autoLoginByLineUserId(lineUserId: string) {
   if (!lineUserId) return { success: false };
 
@@ -87,6 +119,8 @@ export async function autoLoginByLineUserId(lineUserId: string) {
 
   // labs by CID
   let labResults = await fetchLabByCid(idNumber);
+
+  const person = await fetchPersonDetail(idNumber);
 
   // fallback -> HDC person -> labs by PID
   if (labResults.length === 0) {
@@ -108,6 +142,7 @@ export async function autoLoginByLineUserId(lineUserId: string) {
       firstName: user.first_name,
       lastName: user.last_name,
     },
+    person,
     labs: labResults,
   };
 }

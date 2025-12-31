@@ -37,9 +37,10 @@ export default function Page() {
         const d = await r.json();
 
         if (d.success) {
-          // เก็บ labs ไว้ใช้ที่หน้า /home (แทน react-router state เดิม)
+          // เก็บข้อมูลไว้ใช้ที่หน้า /home (แทน react-router state เดิม)
           sessionStorage.setItem("labs", JSON.stringify(d.labs || []));
           sessionStorage.setItem("cid", String(d.user?.idNumber || ""));
+          sessionStorage.setItem("person", JSON.stringify(d.person || null));
           router.push("/home");
         }
       } catch (e: any) {
@@ -73,6 +74,7 @@ export default function Page() {
       }
       sessionStorage.setItem("labs", JSON.stringify(d.labs || []));
       sessionStorage.setItem("cid", String(d.user?.idNumber || cid));
+      sessionStorage.setItem("person", JSON.stringify(d.person || null));
       router.push("/home");
     } catch {
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");

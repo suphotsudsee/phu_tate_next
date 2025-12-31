@@ -52,25 +52,33 @@ function safeNumber(v) {
     var n = Number(v);
     return Number.isFinite(n) ? n : null;
 }
-function toIsoLike(raw) {
-    // ในภาพคุณโชว์แนวนี้: 2025-04-19T17:00:00.000Z
-    // ถ้าข้อมูลเดิมเป็น YYYYMMDD หรือ date string จะพยายามแปลงเป็น ISO ให้
+function toDate(raw) {
     if (!raw)
-        return "-";
+        return null;
     var s = String(raw).trim();
-    // ถ้าเป็น ISO อยู่แล้ว
-    if (s.includes("T") && (s.endsWith("Z") || s.includes(".")))
-        return s;
-    // ถ้าเป็น YYYYMMDD
+    // YYYYMMDD
     if (/^\d{8}$/.test(s)) {
         var y = s.slice(0, 4);
         var m = s.slice(4, 6);
         var d = s.slice(6, 8);
-        var dt_1 = new Date(y + "-" + m + "-" + d + "T17:00:00.000Z");
-        return isNaN(dt_1.getTime()) ? s : dt_1.toISOString();
+        var dt_1 = new Date(y + "-" + m + "-" + d + "T00:00:00");
+        return isNaN(dt_1.getTime()) ? null : dt_1;
     }
+    // ISO / other formats
     var dt = new Date(s);
-    return isNaN(dt.getTime()) ? s : dt.toISOString();
+    return isNaN(dt.getTime()) ? null : dt;
+}
+// โหมดแสดงวันที่ไทย: short = 19 เม.ย. 2568, long = 19 เมษายน 2568
+function formatThaiDate(raw, mode) {
+    if (mode === void 0) { mode = "short"; }
+    var dt = toDate(raw);
+    if (!dt)
+        return "-";
+    var locale = "th-TH";
+    var options = mode === "long"
+        ? { year: "numeric", month: "long", day: "numeric" }
+        : { year: "numeric", month: "short", day: "numeric" };
+    return dt.toLocaleDateString(locale, options);
 }
 function HomePage() {
     var _this = this;
@@ -87,9 +95,10 @@ function HomePage() {
     var labsSorted = react_1.useMemo(function () {
         var copy = __spreadArrays((labs || []));
         copy.sort(function (a, b) {
-            var da = new Date(toIsoLike(a.DATE_SERV)).getTime();
-            var db = new Date(toIsoLike(b.DATE_SERV)).getTime();
-            return db - da;
+            var _a, _b, _c, _d;
+            var da = (_b = (_a = toDate(a.DATE_SERV)) === null || _a === void 0 ? void 0 : _a.getTime()) !== null && _b !== void 0 ? _b : 0;
+            var db = (_d = (_c = toDate(b.DATE_SERV)) === null || _c === void 0 ? void 0 : _c.getTime()) !== null && _d !== void 0 ? _d : 0;
+            return db - da; // ล่าสุดก่อน
         });
         return copy;
     }, [labs]);
@@ -159,7 +168,7 @@ function HomePage() {
                 React.createElement("tbody", null, labsSorted.map(function (row, idx) {
                     var _a;
                     return (React.createElement("tr", { key: (row.CID || cid) + "-" + idx },
-                        React.createElement("td", null, toIsoLike(row.DATE_SERV)),
+                        React.createElement("td", null, formatThaiDate(row.DATE_SERV, "short")),
                         React.createElement("td", null, row.HOSPNAME || row.LABPLACE || row.HOSPCODE || "-"),
                         React.createElement("td", null, row.LABTEST || "-"),
                         React.createElement("td", null, formatLabThai(row)),

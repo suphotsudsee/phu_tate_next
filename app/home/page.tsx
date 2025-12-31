@@ -12,50 +12,65 @@ function safeNumber(v: any) {
   return Number.isFinite(n) ? n : null;
 }
 
-function toIsoLike(raw: any) {
-  // ในภาพคุณโชว์แนวนี้: 2025-04-19T17:00:00.000Z
-  // ถ้าข้อมูลเดิมเป็น YYYYMMDD หรือ date string จะพยายามแปลงเป็น ISO ให้
-  if (!raw) return "-";
+function toDate(raw: any) {
+  if (!raw) return null;
   const s = String(raw).trim();
 
-  // ถ้าเป็น ISO อยู่แล้ว
-  if (s.includes("T") && (s.endsWith("Z") || s.includes("."))) return s;
-
-  // ถ้าเป็น YYYYMMDD
+  // YYYYMMDD
   if (/^\d{8}$/.test(s)) {
     const y = s.slice(0, 4);
     const m = s.slice(4, 6);
     const d = s.slice(6, 8);
-    const dt = new Date(`${y}-${m}-${d}T17:00:00.000Z`);
-    return isNaN(dt.getTime()) ? s : dt.toISOString();
+    const dt = new Date(`${y}-${m}-${d}T00:00:00`);
+    return isNaN(dt.getTime()) ? null : dt;
   }
 
+  // ISO / other formats
   const dt = new Date(s);
-  return isNaN(dt.getTime()) ? s : dt.toISOString();
+  return isNaN(dt.getTime()) ? null : dt;
 }
+
+// โหมดแสดงวันที่ไทย: short = 19 เม.ย. 2568, long = 19 เมษายน 2568
+function formatThaiDate(raw: any, mode: "short" | "long" = "short") {
+  const dt = toDate(raw);
+  if (!dt) return "-";
+
+  const locale = "th-TH";
+  const options: Intl.DateTimeFormatOptions =
+    mode === "long"
+      ? { year: "numeric", month: "long", day: "numeric" }
+      : { year: "numeric", month: "short", day: "numeric" };
+
+  return dt.toLocaleDateString(locale, options);
+}
+
 
 export default function HomePage() {
   const [labs, setLabs] = useState<LabRow[]>([]);
   const [cid, setCid] = useState<string>("");
+  const [person, setPerson] = useState<any>(null);
   const [cvdRisk, setCvdRisk] = useState<any>(null);
 
   useEffect(() => {
     const rawLabs = sessionStorage.getItem("labs");
     const rawCid = sessionStorage.getItem("cid");
+    const rawPerson = sessionStorage.getItem("person");
     setLabs(rawLabs ? JSON.parse(rawLabs) : []);
     setCid(rawCid || "");
+    setPerson(rawPerson ? JSON.parse(rawPerson) : null);
   }, []);
 
   // เรียง "ล่าสุดอยู่บนสุด" เหมือนภาพ
   const labsSorted = useMemo(() => {
     const copy = [...(labs || [])];
     copy.sort((a, b) => {
-      const da = new Date(toIsoLike(a.DATE_SERV)).getTime();
-      const db = new Date(toIsoLike(b.DATE_SERV)).getTime();
-      return db - da;
+      const da = toDate(a.DATE_SERV)?.getTime() ?? 0;
+      const db = toDate(b.DATE_SERV)?.getTime() ?? 0;
+      return db - da; // ล่าสุดก่อน
     });
     return copy;
   }, [labs]);
+
 
   const latestRow = labsSorted[0];
 
@@ -97,6 +112,33 @@ export default function HomePage() {
     <main className="page">
       <h1 className="title">ผลตรวจ (ล่าสุด)</h1>
 
+      {/* การ์ด: รายละเอียดบุคคล (ก่อนผลตรวจ) */}
+      <section className="card" style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: "0 0 8px" }}>ข้อมูลผู้ใช้</h3>
+        <div className="grid">
+          <div>
+            <p className="label">ชื่อ - นามสกุล</p>
+            <p className="value">
+              {person?.firstName || "-"} {person?.lastName || ""}
+            </p>
+          </div>
+          <div>
+            <p className="label">เพศ</p>
+            <p className="chip chip-gender">{person?.gender || "-"}</p>
+          </div>
+          <div>
+            <p className="label">อายุ</p>
+            <p className="chip chip-age">
+              {person?.age != null ? `${person.age} ปี` : "-"}
+            </p>
+          </div>
+          <div>
+            <p className="label">เลขบัตรประชาชน</p>
+            <p className="value mono">{cid || person?.cid || "-"}</p>
+          </div>
+        </div>
+      </section>
+
       {/* การ์ด 1: CVD Risk */}
       <section className="card">
         <div className="bigNumber">
@@ -137,7 +179,7 @@ export default function HomePage() {
           <tbody>
             {labsSorted.map((row: any, idx: number) => (
               <tr key={`${row.CID || cid}-${idx}`}>
-                <td>{toIsoLike(row.DATE_SERV)}</td>
+                <td>{formatThaiDate(row.DATE_SERV, "short")}</td>
                 <td>{row.HOSPNAME || row.LABPLACE || row.HOSPCODE || "-"}</td>
                 <td>{row.LABTEST || "-"}</td>
                 <td>{formatLabThai(row)}</td>

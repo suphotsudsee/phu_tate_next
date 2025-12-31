@@ -83,3 +83,117 @@
 .table td:nth-child(3) { width: 90px; text-align: center; }
 .table td:nth-child(4) { width: 360px; }
 .table td:nth-child(5) { width: 80px; text-align: right; font-weight: 700; }
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at 20% 20%, #e0f2ff, #eef2ff 35%, #fdf4ff 70%);
+  color: #0f172a;
+}
+
+.home-wrap {
+  min-height: 100vh;
+  padding: 48px 24px 72px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.home-hero {
+  background: linear-gradient(135deg, #22d3ee, #6366f1);
+  color: #fff;
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: 0 15px 40px rgba(99, 102, 241, 0.35);
+  margin-bottom: 24px;
+}
+
+.home-hero h1 {
+  margin: 8px 0 6px;
+  font-size: 28px;
+}
+
+.home-hero p {
+  margin: 0;
+  opacity: 0.85;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+  border: 1px solid #e2e8f0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #64748b;
+  letter-spacing: 0.2px;
+}
+
+.value {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mono {
+  font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+  letter-spacing: 0.5px;
+}
+
+.muted {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.error {
+  margin: 0;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.chip-gender {
+  background: linear-gradient(135deg, #fef3c7, #f1f5f9);
+  border-color: #fbbf24;
+}
+
+.chip-age {
+  background: linear-gradient(135deg, #dcfce7, #f8fafc);
+  border-color: #22c55e;
+}

@@ -10,5 +10,5 @@ export async function initLiff() {
     return null;
   }
 
-  return liff.getProfile();
+  return liff;
 }
